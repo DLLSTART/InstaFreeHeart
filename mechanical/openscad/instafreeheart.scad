@@ -104,8 +104,24 @@ module front_shell() {
 
 
 // =============================================================================
-// 3. 8 个铜色线圈（特斯拉风格装饰）
+// 3. 铜色线圈（特斯拉风格装饰）
+// -----------------------------------------------------------------------------
+//   one_coil()      : 单颗（用于 SLA 树脂打印 + 喷涂铜色，下单 8 份）
+//   copper_coils()  : 8 颗按外圈分布（仅用于装配预览，非打印）
 // =============================================================================
+module one_coil() {
+    color(COLOR_COPPER)
+        difference() {
+            cylinder(d=COIL_OD, h=COIL_HEIGHT);
+            translate([0, 0, -0.1])
+                cylinder(d=COIL_ID, h=COIL_HEIGHT + 0.2);
+            // 线圈表面 4 圈环纹（视觉细节）
+            for (k = [1 : 4])
+                translate([0, 0, k * COIL_HEIGHT/5])
+                    ring(COIL_OD - 0.3, COIL_OD - 0.6, 0.2);
+        }
+}
+
 module copper_coils() {
     // 8 个铜线圈位于「8 段外灯柱之间的银夹板」中心位置
     for (i = [0 : COIL_COUNT - 1]) {
@@ -114,16 +130,7 @@ module copper_coils() {
         x = COIL_R * cos(angle);
         y = COIL_R * sin(angle);
         translate([x, y, FRONT_SHELL_T + RING_BAND_T])
-            color(COLOR_COPPER)
-                difference() {
-                    cylinder(d=COIL_OD, h=COIL_HEIGHT);
-                    translate([0, 0, -0.1])
-                        cylinder(d=COIL_ID, h=COIL_HEIGHT + 0.2);
-                    // 线圈表面 4 圈环纹（视觉细节）
-                    for (k = [1 : 4])
-                        translate([0, 0, k * COIL_HEIGHT/5])
-                            ring(COIL_OD - 0.3, COIL_OD - 0.6, 0.2);
-                }
+            one_coil();
     }
 }
 
@@ -520,22 +527,23 @@ module assembly() {
 
 
 // =============================================================================
-// 14. 入口（默认渲染装配体）
+// 14. 入口 — PART 选择器
+// -----------------------------------------------------------------------------
+//   命令行用法（覆盖 PART 变量，导出对应零件 STL）：
+//     openscad -o front_shell.stl -D 'PART="front"' instafreeheart.scad
+//     openscad -o back_shell.stl  -D 'PART="back"'  instafreeheart.scad
+//     openscad -o copper_coil.stl -D 'PART="coil"'  instafreeheart.scad
+//     openscad -o tri_supports.stl -D 'PART="tri"'  instafreeheart.scad
+//     openscad -o assembly.stl    -D 'PART="all"'   instafreeheart.scad
+//
+//   渲染预览（默认 assembly）：
+//     openscad instafreeheart.scad
 // =============================================================================
-assembly();
+PART = "all";    // "all" | "front" | "back" | "coil" | "tri"
 
-// ----- 单件导出（用时取消对应行注释，注释掉 assembly()） -----
-// front_shell();
-// copper_coils();
-// tri_supports();
-// center_lens();
-// diffuser();
-// led_ring();
-// main_pcb();
-// battery_pack();
-// ntc_dots();          // ☆ 散热升级 - 3 颗 NTC
-// tim_pad();           // ☆ 散热升级 - 导热硅胶垫
-// graphene_film();     // ☆ 散热升级 - 石墨烯散热膜
-// back_shell();
-// magnet_array();
-// silicon_pad();
+if      (PART == "all")   assembly();
+else if (PART == "front") front_shell();
+else if (PART == "back")  back_shell();
+else if (PART == "coil")  one_coil();
+else if (PART == "tri")   tri_supports();
+else                      assembly();
